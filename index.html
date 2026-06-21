@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>咖啡馆会员管理系统</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>☕ 咖啡馆会员管理系统</h1>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="members">会员管理</button>
+            <button class="tab-btn" data-tab="products">商品管理</button>
+            <button class="tab-btn" data-tab="recharge">充值</button>
+            <button class="tab-btn" data-tab="order">消费下单</button>
+            <button class="tab-btn" data-tab="exchange">积分兑换</button>
+            <button class="tab-btn" data-tab="sales">销售统计</button>
+        </nav>
+
+        <div class="tab-content">
+            <div id="members" class="tab-pane active">
+                <h2>会员管理</h2>
+                <div class="form-box">
+                    <input type="text" id="member-nickname" placeholder="昵称">
+                    <input type="text" id="member-phone" placeholder="手机号">
+                    <button onclick="addMember()">添加会员</button>
+                </div>
+                <div id="members-list"></div>
+            </div>
+
+            <div id="products" class="tab-pane">
+                <h2>商品管理</h2>
+                <div class="form-box">
+                    <input type="text" id="product-name" placeholder="商品名">
+                    <select id="product-type">
+                        <option value="咖啡">咖啡</option>
+                        <option value="茶饮">茶饮</option>
+                        <option value="甜点">甜点</option>
+                        <option value="轻食">轻食</option>
+                        <option value="周边">周边</option>
+                    </select>
+                    <input type="number" id="product-price" placeholder="价格（分）" min="1">
+                    <select id="product-status">
+                        <option value="上架">上架</option>
+                        <option value="下架">下架</option>
+                    </select>
+                    <button onclick="addProduct()">添加商品</button>
+                </div>
+                <div id="products-list"></div>
+            </div>
+
+            <div id="recharge" class="tab-pane">
+                <h2>充值</h2>
+                <div class="form-box">
+                    <select id="recharge-member"></select>
+                    <input type="number" id="recharge-amount" placeholder="充值金额（分）" min="1">
+                    <button onclick="recharge()">充值</button>
+                </div>
+                <div id="recharge-result"></div>
+            </div>
+
+            <div id="order" class="tab-pane">
+                <h2>消费下单</h2>
+                <div class="form-box">
+                    <select id="order-member"></select>
+                    <div id="order-items"></div>
+                    <button onclick="addOrderItem()">+ 添加商品</button>
+                    <button onclick="submitOrder()">提交订单</button>
+                </div>
+                <div id="order-result"></div>
+            </div>
+
+            <div id="exchange" class="tab-pane">
+                <h2>积分兑换</h2>
+                <div class="form-box">
+                    <select id="exchange-member"></select>
+                    <input type="number" id="exchange-points" placeholder="兑换积分（100的倍数）" min="100" step="100">
+                    <p class="hint">每100积分兑换10元（1000分）余额</p>
+                    <button onclick="exchangePoints()">兑换</button>
+                </div>
+                <div id="exchange-result"></div>
+            </div>
+
+            <div id="sales" class="tab-pane">
+                <h2>本月销售统计</h2>
+                <div id="sales-list"></div>
+                <button onclick="loadSales()">刷新数据</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h3 id="modal-title">编辑</h3>
+            <div id="modal-body"></div>
+            <button id="modal-save" onclick="saveModal()">保存</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

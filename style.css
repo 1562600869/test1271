@@ -1,0 +1,363 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #f5e6d3 0%, #e8d4b8 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+header {
+    background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
+    color: #fff;
+    padding: 24px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.tabs {
+    display: flex;
+    background: #f9f5f0;
+    border-bottom: 2px solid #e8d4b8;
+    flex-wrap: wrap;
+}
+
+.tab-btn {
+    flex: 1;
+    min-width: 100px;
+    padding: 14px 16px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.3s;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-btn:hover {
+    background: #f0e6d6;
+    color: #8b4513;
+}
+
+.tab-btn.active {
+    color: #8b4513;
+    background: #fff;
+    border-bottom-color: #8b4513;
+}
+
+.tab-content {
+    padding: 24px;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+.tab-pane h2 {
+    color: #8b4513;
+    margin-bottom: 20px;
+    font-size: 22px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0e6d6;
+}
+
+.form-box {
+    background: #faf7f2;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.form-box input,
+.form-box select {
+    padding: 10px 12px;
+    border: 1px solid #d4c4a8;
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+    min-width: 150px;
+}
+
+.form-box input:focus,
+.form-box select:focus {
+    outline: none;
+    border-color: #8b4513;
+    box-shadow: 0 0 0 2px rgba(139, 69, 19, 0.1);
+}
+
+.form-box button {
+    padding: 10px 20px;
+    background: #8b4513;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.3s;
+}
+
+.form-box button:hover {
+    background: #6b3410;
+}
+
+.hint {
+    width: 100%;
+    color: #888;
+    font-size: 13px;
+    margin-top: -8px;
+}
+
+.order-item {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    width: 100%;
+    align-items: center;
+}
+
+.order-item select,
+.order-item input {
+    padding: 8px 10px;
+    border: 1px solid #d4c4a8;
+    border-radius: 6px;
+    font-size: 14px;
+    flex: 1;
+}
+
+.order-item button {
+    padding: 8px 14px;
+    background: #d9534f;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.order-item button:hover {
+    background: #c9302c;
+}
+
+#order-items {
+    width: 100%;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+table th,
+table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e8d4b8;
+}
+
+table th {
+    background: #f5e6d3;
+    color: #8b4513;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+table tr:hover {
+    background: #faf7f2;
+}
+
+table tr.offline {
+    background: #f8f8f8;
+    opacity: 0.6;
+}
+
+table tr.total {
+    background: #f5e6d3;
+    font-weight: 600;
+    color: #8b4513;
+}
+
+table td button {
+    padding: 6px 12px;
+    margin-right: 6px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: opacity 0.3s;
+}
+
+table td button:hover {
+    opacity: 0.8;
+}
+
+table td button:first-of-type {
+    background: #5bc0de;
+    color: #fff;
+}
+
+table td button:last-of-type {
+    background: #d9534f;
+    color: #fff;
+}
+
+.success {
+    background: #d4edda;
+    color: #155724;
+    padding: 16px;
+    border-radius: 6px;
+    border-left: 4px solid #28a745;
+    margin-bottom: 16px;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background: #fff;
+    margin: 10% auto;
+    padding: 24px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 480px;
+    position: relative;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h3 {
+    color: #8b4513;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0e6d6;
+}
+
+.modal-content label {
+    display: block;
+    margin-bottom: 12px;
+    color: #333;
+}
+
+.modal-content input,
+.modal-content select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d4c4a8;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.modal-content input:focus,
+.modal-content select:focus {
+    outline: none;
+    border-color: #8b4513;
+}
+
+.modal-content button {
+    margin-top: 12px;
+    padding: 10px 24px;
+    background: #8b4513;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    width: 100%;
+}
+
+.modal-content button:hover {
+    background: #6b3410;
+}
+
+.close {
+    position: absolute;
+    right: 16px;
+    top: 12px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #999;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close:hover {
+    color: #333;
+}
+
+#sales-list p {
+    text-align: center;
+    color: #888;
+    padding: 40px;
+    font-size: 16px;
+}
+
+#sales button {
+    margin-top: 16px;
+    padding: 10px 20px;
+    background: #8b4513;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#sales button:hover {
+    background: #6b3410;
+}
+
+@media (max-width: 768px) {
+    .tab-btn {
+        font-size: 12px;
+        padding: 12px 8px;
+        min-width: 70px;
+    }
+
+    .form-box input,
+    .form-box select {
+        width: 100%;
+    }
+
+    table th,
+    table td {
+        padding: 8px;
+        font-size: 13px;
+    }
+}
