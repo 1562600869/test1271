@@ -4,13 +4,29 @@ import sqlite3
 import json
 import os
 import urllib.parse
+import re
 
 PORT = 5193
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cafe.db')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'cafe.db')
+ENABLE_LOG = True
+PHONE_PATTERN = re.compile(r'^1[3-9]\d{9}$')
+
+
+def get_db_connection():
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute('PRAGMA foreign_keys = ON')
+    return conn
+
+
+def validate_phone(phone):
+    if not phone:
+        return False
+    return bool(PHONE_PATTERN.match(phone))
 
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_db_connection()
     c = conn.cursor()
 
     c.execute('''CREATE TABLE IF NOT EXISTS members
@@ -79,7 +95,8 @@ def json_response(handler, data, status=200):
     handler.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
 
 
-def static_response(handler, filepath, content_type):
+def static_response(handler, filename, content_type):
+    filepath = os.path.join(BASE_DIR, filename)
     if os.path.exists(filepath):
         with open(filepath, 'rb') as f:
             content = f.read()
@@ -91,6 +108,13 @@ def static_response(handler, filepath, content_type):
         handler.send_response(404)
         handler.end_headers()
         handler.wfile.write(b'Not Found')
+
+
+def parse_path_id(path):
+    try:
+        return int(path.split('/')[-1])
+    except (ValueError, IndexError):
+        return None
 
 
 class CafeHandler(http.server.BaseHTTPRequestHandler):
@@ -132,7 +156,11 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
 
         content_length = int(self.headers.get('Content-Length', 0))
         body = self.rfile.read(content_length).decode('utf-8')
-        data = json.loads(body) if body else {}
+        try:
+            data = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            json_response(self, {'error': '请求体格式错误'}, 400)
+            return
 
         if path == '/api/members':
             self.create_member(data)
@@ -153,13 +181,23 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
 
         content_length = int(self.headers.get('Content-Length', 0))
         body = self.rfile.read(content_length).decode('utf-8')
-        data = json.loads(body) if body else {}
+        try:
+            data = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            json_response(self, {'error': '请求体格式错误'}, 400)
+            return
 
         if path.startswith('/api/members/'):
-            member_id = int(path.split('/')[-1])
+            member_id = parse_path_id(path)
+            if member_id is None:
+                json_response(self, {'error': '无效的会员ID'}, 400)
+                return
             self.update_member(member_id, data)
         elif path.startswith('/api/products/'):
-            product_id = int(path.split('/')[-1])
+            product_id = parse_path_id(path)
+            if product_id is None:
+                json_response(self, {'error': '无效的商品ID'}, 400)
+                return
             self.update_product(product_id, data)
         else:
             json_response(self, {'error': 'Not Found'}, 404)
@@ -169,16 +207,22 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
         path = parsed.path
 
         if path.startswith('/api/members/'):
-            member_id = int(path.split('/')[-1])
+            member_id = parse_path_id(path)
+            if member_id is None:
+                json_response(self, {'error': '无效的会员ID'}, 400)
+                return
             self.delete_member(member_id)
         elif path.startswith('/api/products/'):
-            product_id = int(path.split('/')[-1])
+            product_id = parse_path_id(path)
+            if product_id is None:
+                json_response(self, {'error': '无效的商品ID'}, 400)
+                return
             self.delete_product(product_id)
         else:
             json_response(self, {'error': 'Not Found'}, 404)
 
     def list_members(self):
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
         c.execute('SELECT * FROM members ORDER BY created_at DESC')
         members = c.fetchall()
@@ -191,8 +235,11 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
         if not data.get('nickname') or not data.get('phone'):
             json_response(self, {'error': '昵称和手机不能为空'}, 400)
             return
+        if not validate_phone(data.get('phone')):
+            json_response(self, {'error': '手机号格式不正确'}, 400)
+            return
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = get_db_connection()
             c = conn.cursor()
             c.execute('INSERT INTO members (nickname, phone, balance, points) VALUES (?, ?, 0, 0)',
                       (data['nickname'], data['phone']))
@@ -211,7 +258,10 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
         if not data.get('nickname') or not data.get('phone'):
             json_response(self, {'error': '昵称和手机不能为空'}, 400)
             return
-        conn = sqlite3.connect(DB_PATH)
+        if not validate_phone(data.get('phone')):
+            json_response(self, {'error': '手机号格式不正确'}, 400)
+            return
+        conn = get_db_connection()
         c = conn.cursor()
         c.execute('UPDATE members SET nickname = ?, phone = ? WHERE id = ?',
                   (data['nickname'], data['phone'], member_id))
@@ -228,19 +278,23 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
         json_response(self, result)
 
     def delete_member(self, member_id):
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
-        c.execute('DELETE FROM members WHERE id = ?', (member_id,))
-        conn.commit()
-        affected = c.rowcount
-        conn.close()
-        if affected == 0:
-            json_response(self, {'error': '会员不存在'}, 404)
-        else:
-            json_response(self, {'success': True})
+        try:
+            c.execute('DELETE FROM members WHERE id = ?', (member_id,))
+            conn.commit()
+            affected = c.rowcount
+            conn.close()
+            if affected == 0:
+                json_response(self, {'error': '会员不存在'}, 404)
+            else:
+                json_response(self, {'success': True})
+        except sqlite3.IntegrityError:
+            conn.close()
+            json_response(self, {'error': '该会员存在关联记录，无法删除'}, 400)
 
     def list_products(self):
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
         c.execute('SELECT * FROM products ORDER BY type, name')
         products = c.fetchall()
@@ -259,7 +313,7 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
         if not isinstance(data['price'], int) or data['price'] <= 0:
             json_response(self, {'error': '价格必须是正整数分'}, 400)
             return
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
         status = data.get('status', '上架')
         if status not in ['上架', '下架']:
@@ -285,7 +339,7 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
         if not isinstance(data['price'], int) or data['price'] <= 0:
             json_response(self, {'error': '价格必须是正整数分'}, 400)
             return
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
         status = data.get('status', '上架')
         if status not in ['上架', '下架']:
@@ -305,16 +359,20 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
         json_response(self, result)
 
     def delete_product(self, product_id):
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
-        c.execute('DELETE FROM products WHERE id = ?', (product_id,))
-        conn.commit()
-        affected = c.rowcount
-        conn.close()
-        if affected == 0:
-            json_response(self, {'error': '商品不存在'}, 404)
-        else:
-            json_response(self, {'success': True})
+        try:
+            c.execute('DELETE FROM products WHERE id = ?', (product_id,))
+            conn.commit()
+            affected = c.rowcount
+            conn.close()
+            if affected == 0:
+                json_response(self, {'error': '商品不存在'}, 404)
+            else:
+                json_response(self, {'success': True})
+        except sqlite3.IntegrityError:
+            conn.close()
+            json_response(self, {'error': '该商品存在关联记录，无法删除'}, 400)
 
     def recharge(self, data):
         member_id = data.get('member_id')
@@ -326,25 +384,30 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
             json_response(self, {'error': '充值金额必须是正整数分'}, 400)
             return
         points_gifted = amount // 10
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
-        c.execute('SELECT * FROM members WHERE id = ?', (member_id,))
-        member = c.fetchone()
-        if not member:
+        try:
+            c.execute('SELECT * FROM members WHERE id = ?', (member_id,))
+            member = c.fetchone()
+            if not member:
+                conn.close()
+                json_response(self, {'error': '会员不存在'}, 404)
+                return
+            c.execute('UPDATE members SET balance = balance + ?, points = points + ? WHERE id = ?',
+                      (amount, points_gifted, member_id))
+            c.execute('INSERT INTO recharge_records (member_id, amount, points_gifted) VALUES (?, ?, ?)',
+                      (member_id, amount, points_gifted))
+            conn.commit()
+            c.execute('SELECT * FROM members WHERE id = ?', (member_id,))
+            member = c.fetchone()
+            columns = [desc[0] for desc in c.description]
+            result = dict(zip(columns, member))
             conn.close()
-            json_response(self, {'error': '会员不存在'}, 404)
-            return
-        c.execute('UPDATE members SET balance = balance + ?, points = points + ? WHERE id = ?',
-                  (amount, points_gifted, member_id))
-        c.execute('INSERT INTO recharge_records (member_id, amount, points_gifted) VALUES (?, ?, ?)',
-                  (member_id, amount, points_gifted))
-        conn.commit()
-        c.execute('SELECT * FROM members WHERE id = ?', (member_id,))
-        member = c.fetchone()
-        columns = [desc[0] for desc in c.description]
-        result = dict(zip(columns, member))
-        conn.close()
-        json_response(self, result)
+            json_response(self, result)
+        except Exception as e:
+            conn.rollback()
+            conn.close()
+            json_response(self, {'error': f'充值失败: {str(e)}'}, 500)
 
     def create_order(self, data):
         member_id = data.get('member_id')
@@ -352,7 +415,7 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
         if not member_id or not items:
             json_response(self, {'error': '会员ID和商品不能为空'}, 400)
             return
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
         try:
             c.execute('SELECT * FROM members WHERE id = ?', (member_id,))
@@ -436,7 +499,7 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
             json_response(self, {'error': '兑换积分必须是100的正整数倍'}, 400)
             return
         balance_added = (points // 100) * 1000
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
         try:
             c.execute('SELECT * FROM members WHERE id = ?', (member_id,))
@@ -471,7 +534,7 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
             json_response(self, {'error': f'兑换失败: {str(e)}'}, 500)
 
     def get_monthly_sales(self):
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         c = conn.cursor()
         c.execute('''SELECT oi.product_type, 
                      SUM(oi.quantity) as total_quantity,
@@ -488,7 +551,8 @@ class CafeHandler(http.server.BaseHTTPRequestHandler):
         json_response(self, result)
 
     def log_message(self, format, *args):
-        pass
+        if ENABLE_LOG:
+            super().log_message(format, *args)
 
 
 if __name__ == '__main__':
